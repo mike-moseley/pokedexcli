@@ -6,12 +6,15 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/mike-moseley/pokedexcli/internal/pokecache"
 )
 
 const baseURL = "https://pokeapi.co/api/v2/location-area"
 
 type Client struct {
 	httpClient http.Client
+	cache      pokecache.Cache
 }
 
 func NewClient(duration time.Duration) Client {
@@ -19,6 +22,7 @@ func NewClient(duration time.Duration) Client {
 		httpClient: http.Client{
 			Timeout: duration,
 		},
+		cache: *pokecache.NewCache(duration),
 	}
 }
 
@@ -27,6 +31,17 @@ func (c *Client) ListLocations(pageURL *string) (RespLocations, error) {
 		newURL := baseURL
 		pageURL = &newURL
 	}
+
+	if val, ok := c.cache.Get(*pageURL); ok {
+		result := RespLocations{}
+		err := json.Unmarshal(val, &result)
+		if err != nil {
+			return RespLocations{}, fmt.Errorf("Error unmarshaling cache: %w", err)
+		}
+		fmt.Println("Cache Hit!")
+		return result, nil
+	}
+
 	res, err := c.httpClient.Get(*pageURL)
 	if err != nil {
 		return RespLocations{}, fmt.Errorf("Error fetching from pokeapi: %w", err)
@@ -44,5 +59,6 @@ func (c *Client) ListLocations(pageURL *string) (RespLocations, error) {
 		return RespLocations{}, fmt.Errorf("Error unmarshaling json: %w", err)
 	}
 
+	c.cache.Add(*pageURL, body)
 	return resp_locations, nil
 }
