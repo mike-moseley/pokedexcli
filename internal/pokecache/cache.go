@@ -49,11 +49,11 @@ func (c *Cache) reapLoop() {
 	ticker := time.NewTicker(c.interval)
 	for range ticker.C {
 		c.mu.Lock()
-		defer c.mu.Unlock()
 		for k, v := range c.cacheMap {
 			if time.Since(v.createdAt) > c.interval {
 				delete(c.cacheMap, k)
 			}
 		}
+		c.mu.Unlock()
 	}
 }

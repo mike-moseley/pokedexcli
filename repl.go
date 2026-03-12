@@ -17,9 +17,15 @@ func startRepl(c *config) {
 		input := scanner.Text()
 		input_slice := cleanInput(input)
 		command := input_slice[0]
+		var argument string
+		if len(input_slice) > 1 {
+			argument = input_slice[1]
+		}
 		_, ok := commands[command]
 		if ok {
-			commands[command].callback(c)
+			if err := commands[command].callback(c, argument); err != nil {
+				fmt.Println(err)
+			}
 		} else {
 			fmt.Println("Command not found")
 		}
@@ -55,16 +61,32 @@ var commands = map[string]cliCommand{
 		description: "Show previous map list",
 		callback:    commandMapb,
 	},
+	"explore": {
+		name:        "explore",
+		description: "Explore the pokemon in an area",
+		callback:    commandExplore,
+	},
+	"catch": {
+		name:        "catch",
+		description: "Catch a pokemon",
+		callback:    commandCatch,
+	},
+	"inspect": {
+		name:        "inspect",
+		description: "Inspect a pokemon from your pokedex",
+		callback:    commandInspect,
+	},
 }
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, string) error
 }
 
 type config struct {
 	pokeapiClient        pokeapi.Client
+	pokedex              map[string]pokeapi.Pokemon
 	nextLocationsURL     *string
 	previousLocationsURL *string
 }
